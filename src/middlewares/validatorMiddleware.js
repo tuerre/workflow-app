@@ -2,22 +2,17 @@ import { ZodError } from "zod"
 
 const validate = (schema) => (req, res, next) => {
   try {
-    schema.parse(req.body)
-    next()
-  } catch (err) {
-    if (err instanceof ZodError) {
+    const result = schema.safeParse(req.body);
+    if (!result.success) {
       return res.status(400).json({
-        success: false,
-        message: "Errores de validación",
-        errors: err.errors.map(e => ({
-          path: e.path.join('.'),
-          message: e.message
-        }))
-      })
-    } else {
-      console.error("🛑 Error inesperado en validación:", err)
-      return res.status(500).json({ message: "Error interno del servidor" })
+        error: 'Datos inválidos',
+        details: result.error.flatten().fieldErrors
+      });
     }
+    req.body = result.data;
+    next();
+  } catch(err) {
+    res.status(500).json({ error: 'Error interno servidor' });
   }
 }
 
